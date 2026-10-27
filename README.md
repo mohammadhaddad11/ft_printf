@@ -2,16 +2,24 @@
 
 # ft_printf
 
+A compact C implementation of formatted output using variadic arguments and a character-by-character format dispatcher.
+
 ## Description
 
-A focused implementation of formatted stdout output in C. The project develops
-variadic-function handling, format parsing, recursive numeric conversion, and
-accurate output-length accounting without depending on libc `printf` for its
-implementation.
+`ft_printf(const char *format, ...)` writes to standard output and returns its accumulated output count. On supported normal-output paths this is the number of bytes written; write failures are not consistently propagated.
+
+| Conversion | Output |
+| --- | --- |
+| `%c`, `%s` | Character and string; a NULL string produces `(null)` |
+| `%p` | Pointer in lowercase hexadecimal with `0x`; zero produces `(nil)` |
+| `%d`, `%i` | Signed decimal integer |
+| `%u` | Unsigned decimal integer |
+| `%x`, `%X` | Lowercase and uppercase hexadecimal |
+| `%%` | Literal percent |
 
 ## Instructions
 
-Requirements: a C compiler, Make, and `ar` on a Unix-like system.
+Requires a C compiler, Make, and `ar`.
 
 ```sh
 git clone git@github.com:mohammadhaddad11/ft_printf.git
@@ -21,46 +29,17 @@ cc -Wall -Wextra -Werror -I. examples/demo.c libftprintf.a -o printf_example
 ./printf_example
 ```
 
-The archive is `libftprintf.a`; include `ft_printf.h` in client code. Targets
-`clean`, `fclean`, and `re` remove objects, remove the archive, and rebuild.
+The header is `ft_printf.h` and the generated archive is `libftprintf.a`. Use `make clean`, `make fclean`, or `make re` to clean or rebuild.
 
-## Technical Implementation
+## Implementation
 
-`ft_printf(const char *format, ...)` walks the string from left to right. Literal
-characters go directly to `write(1, ...)`; `%` dispatches the next character to
-a conversion helper. The helper byte counts are added to the return value.
-`va_start`, `va_arg`, and `va_end` provide variadic access.
+The function walks the format string from left to right. Ordinary characters are written directly; a `%` dispatches to the appropriate conversion helper. Arguments are accessed with `va_arg`, and the helper byte counts contribute to the final return value.
 
-| Conversion | Behavior |
-| --- | --- |
-| `%c` | One character, including a possible NUL byte |
-| `%s` | String; NULL produces `(null)` |
-| `%p` | Lowercase hexadecimal with `0x`; zero produces `(nil)` |
-| `%d`, `%i` | Signed decimal `int` |
-| `%u` | Unsigned decimal |
-| `%x`, `%X` | Lowercase/uppercase hexadecimal |
-| `%%` | Literal percent sign |
+Numeric helpers recursively write higher-order digits before the final digit. This avoids heap allocation for integer formatting, while making many small `write` calls.
 
-## Algorithms and Design Decisions
+## Testing and Limitations
 
-Decimal and hexadecimal helpers recursively emit the higher digits before the
-last digit. Numeric conversion needs O(log n) recursion depth and no heap
-allocation. String output is linear in its length. The small dispatcher is easy
-to inspect, but one-character writes trade throughput for simplicity.
-
-This is a supported subset of `printf`, not a complete replacement. Width,
-precision, flags, length modifiers, and floating-point conversions are absent.
-Unknown conversion characters produce no output. NULL format strings and a
-trailing solitary `%` are not safely handled. `%p` reads `unsigned long`, which
-relies on ABI assumptions; the observed Linux behavior is not a portable C
-guarantee. Helpers do not consistently propagate write failures.
-
-## Verification
-
-On Fedora, 2026-10-27, `make re` and the example passed with strict warning flags.
-[`tests/compare.c`](tests/compare.c) matched libc output and a return count of
-78 bytes for a combined supported-format case covering integer boundaries,
-hexadecimal, a fixed non-NULL pointer, percent, strings, and a NUL character.
+The repository contains [a demo](examples/demo.c) and [a comparison test](tests/compare.c). During the earlier portfolio publication, a targeted supported-format comparison matched libc output and a 78-byte return count.
 
 ```sh
 cc -Wall -Wextra -Werror -I. tests/compare.c libftprintf.a -o printf_compare
@@ -70,17 +49,13 @@ cmp custom.out libc.out
 cmp custom.count libc.count
 ```
 
-These are targeted checks, not exhaustive libc conformance or write-error
-certification. Unsupported-format limitations remain in the original source.
+Width, precision, formatting flags, length modifiers, and floating-point conversions are not implemented. A null format string, a trailing solitary `%`, and some write-failure paths are not safely handled. Unknown conversions produce no output. `%p` retrieves an `unsigned long` rather than `void *`, so its behavior relies on ABI assumptions and is not a portable C guarantee.
 
 ## Resources
 
-- Linux manual pages: `printf(3)`, `stdarg(3)`, `write(2)`.
-- [Variadic arguments](https://en.cppreference.com/w/c/variadic).
-- Conversion-table and usage presentation informed by [AhmadNajiKam/Ft_Printf](https://github.com/AhmadNajiKam/Ft_Printf) and [BilalOrabi/Printf](https://github.com/BilalOrabi/Printf); no code was copied.
+- C/POSIX manual pages: `printf(3)`, `stdarg(3)`, `write(2)`
+- [C variadic arguments](https://en.cppreference.com/w/c/variadic)
 
 ## AI Usage
 
-The original README included AI-use documentation. For this publication, an AI
-assistant inspected the implementation, revised its explanations, and added
-the example and differential check. No formatting algorithm was replaced.
+AI assisted with documentation and targeted verification examples during portfolio publication. This README refresh used AI-assisted review; the formatting implementation remains unchanged.
