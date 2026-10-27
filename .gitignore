@@ -1,0 +1,11 @@
+*.o
+*.a
+/printf_example
+/printf_compare
+*.out
+*.count
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
